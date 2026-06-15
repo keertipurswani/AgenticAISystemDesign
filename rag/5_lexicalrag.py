@@ -1,5 +1,3 @@
-
-
 import argparse
 from pathlib import Path
 from dotenv import load_dotenv
@@ -10,14 +8,19 @@ load_dotenv()
 
 from langchain_core.documents import Document
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
+from rank_bm25 import BM25Okapi
 from langchain_openai import ChatOpenAI
 from langchain_core.tools.retriever import create_retriever_tool
 from langchain.agents import create_agent
 
-from langchain.agents.middleware import ModelCallLimitMiddleware
-from langchain.agents.middleware import ToolCallLimitMiddleware
+
+
+
+# ---------------------------------------------------------------------------
+# 1. LOAD
+# ---------------------------------------------------------------------------
 
 
 CHUNK_SIZE = 256
@@ -33,6 +36,11 @@ def load_codebase(repo_path: str) -> list:
 
 
 
+# ---------------------------------------------------------------------------
+# 2. CHUNK — same character-based splits as demo 1
+# ---------------------------------------------------------------------------
+
+
 def chunk_code(docs: list) -> list:
    splitter = RecursiveCharacterTextSplitter.from_language(
        language=Language.PYTHON,
@@ -44,16 +52,49 @@ def chunk_code(docs: list) -> list:
 
 
 
-def build_vector_store(chunks: list) -> Chroma:
-   embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-   return Chroma.from_documents(chunks, embedding=embeddings)
+# ---------------------------------------------------------------------------
+# 3. BM25 INDEX — no embeddings, pure term frequency
+# ---------------------------------------------------------------------------
+
+
+class BM25Retriever(BaseRetriever):
+   """Thin LangChain-compatible retriever backed by rank_bm25."""
+   docs: list
+   bm25: object
+   k: int = 4
+
+
+   class Config:
+       arbitrary_types_allowed = True
+
+
+   def _get_relevant_documents(
+       self, query: str, *, run_manager: CallbackManagerForRetrieverRun
+   ) -> list:
+       tokens = query.lower().split()
+       scores = self.bm25.get_scores(tokens)
+       top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[: self.k]
+       return [self.docs[i] for i in top_indices]
 
 
 
 
-def build_agent(vector_store: Chroma):
+def build_bm25_retriever(chunks: list) -> BM25Retriever:
+   tokenized = [doc.page_content.lower().split() for doc in chunks]
+   bm25 = BM25Okapi(tokenized)
+   return BM25Retriever(docs=chunks, bm25=bm25)
+
+
+
+
+# ---------------------------------------------------------------------------
+# 4. RETRIEVER + AGENT
+# ---------------------------------------------------------------------------
+
+
+def build_agent(retriever: BaseRetriever):
    retriever_tool = create_retriever_tool(
-       vector_store.as_retriever(search_kwargs={"k": 1}),
+       retriever,
        name="search_codebase",
        description="Search the codebase for relevant functions, classes, or logic.",
    )
@@ -65,19 +106,17 @@ def build_agent(vector_store: Chroma):
            "Reference specific file and function names. "
            "If not found say 'I could not find that in the codebase'."
        ),
-       middleware=[
-           ModelCallLimitMiddleware(run_limit=2, exit_behavior="end"),
-           ToolCallLimitMiddleware(tool_name="search_codebase", run_limit=1, exit_behavior="end")
-       ]
-
    )
 
 
 
 
+# ---------------------------------------------------------------------------
+# 5. MAIN
+# ---------------------------------------------------------------------------
+
+
 if __name__ == "__main__":
-
-
    parser = argparse.ArgumentParser()
    parser.add_argument("--repo", default=str(Path(__file__).parent.parent / "sample_project"))
    args = parser.parse_args()
@@ -95,12 +134,9 @@ if __name__ == "__main__":
 
 
 
-   vector_store = build_vector_store(chunks)
-   agent = build_agent(vector_store)
-
-
-
-
+   retriever = build_bm25_retriever(chunks)
+   agent = build_agent(retriever)
+  
 
 
    print("Ready. Ask your question. Type 'exit' to quit")

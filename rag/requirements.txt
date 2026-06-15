@@ -8,3 +8,5 @@ langchain-text-splitters
 langchain-chroma
 chromadb
 sentence-transformers
+rank_bm25
+langchain_classic
