@@ -1,0 +1,14 @@
+python-dotenv
+langgraph
+langchain
+langchain-core
+langchain-openai
+langchain-huggingface
+langchain-text-splitters
+langchain-chroma
+chromadb
+sentence-transformers
+rank_bm25
+langchain_classic
+langchain_google_vertexai
+ragas
