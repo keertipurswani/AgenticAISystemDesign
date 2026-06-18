@@ -34,9 +34,6 @@ from langchain_core.documents import Document
 from langchain_core.messages import ToolMessage
 from langchain_core.vectorstores import InMemoryVectorStore
 
-if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding="utf-8")
-
 EMBEDDING_MODEL = "text-embedding-3-small"
 MAX_TREE_LEVELS = 3
 MAX_CLUSTER_SIZE = 3
