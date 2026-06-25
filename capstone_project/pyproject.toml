@@ -1,0 +1,36 @@
+[project]
+name = "capstone-project"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "keertipurswani",email = "team@educosys.com"}
+]
+requires-python = ">=3.12,<4.0.0"
+dependencies = [
+    "python-dotenv (>=1.2.2,<2.0.0)",
+    "openai (>=2.43.0,<3.0.0)",
+    "chromadb (>=1.5.9,<2.0.0)",
+    "rich (>=15.0.0,<16.0.0)",
+    "pydantic (>=2.13.4,<3.0.0)",
+    "pyyaml (>=6.0.3,<7.0.0)",
+    "langchain (>=1.3.11,<2.0.0) ; python_version >= \"3.12\" and python_full_version < \"4.0.0\"",
+    "langchain-openai (>=1.3.3,<2.0.0) ; python_version >= \"3.12\" and python_full_version < \"4.0.0\"",
+    "langchain-anthropic (>=1.4.7,<2.0.0) ; python_version >= \"3.12\" and python_full_version < \"4.0.0\"",
+    "langchain-huggingface (>=1.2.2,<2.0.0) ; python_version >= \"3.12\" and python_full_version < \"4.0.0\"",
+    "langchain-qdrant (>=1.1.0,<2.0.0) ; python_version >= \"3.12\" and python_full_version < \"4.0.0\"",
+    "fastembed (>=0.8.0,<0.9.0)",
+    "langgraph-checkpoint-sqlite (>=3.1.0,<4.0.0)"
+]
+
+
+[tool.poetry]
+packages = [{include = "educosys_claude"}]
+
+
+[tool.poetry.scripts]
+educosys_claude = "educosys_claude.main:run"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

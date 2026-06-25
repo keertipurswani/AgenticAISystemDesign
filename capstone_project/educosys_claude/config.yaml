@@ -1,0 +1,37 @@
+memory:
+ db_path: .memory/memory.db
+ summarize_at_tokens: 4000
+ keep_last_messages: 20
+
+
+rag:
+ mode: semantic           # semantic | hybrid
+
+vector_store:
+ provider: qdrant
+ retrieval_mode: hybrid  # dense | sparse | hybrid
+
+
+vector_store:
+ provider: qdrant
+
+qdrant:
+ collection_name: educosys_claude
+
+llm:
+ provider: openai        # openai | anthropic
+ model: gpt-4o
+
+embeddings:
+ provider: openai             
+ model: text-embedding-3-small
+
+
+chromadb:
+ persist_dir: .chromadb/
+ collection_name: codebase
+
+
+elasticsearch:
+ url: http://localhost:9200
+ index_name: codebase
