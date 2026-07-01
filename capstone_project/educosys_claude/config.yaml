@@ -1,37 +1,32 @@
+skills:
+ skills_dir: .educosys/skills
+
 memory:
- db_path: .memory/memory.db
+ db_path: .educosys/memory/memory.db
  summarize_at_tokens: 4000
  keep_last_messages: 20
 
+chromadb:
+ persist_dir: .educosys/chromadb/
+ collection_name: codebase
 
 rag:
  mode: semantic           # semantic | hybrid
 
 vector_store:
- provider: qdrant
- retrieval_mode: hybrid  # dense | sparse | hybrid
-
+ provider: chroma
+ retrieval_mode: dense  # dense | sparse | hybrid
 
 vector_store:
- provider: qdrant
+ provider: chroma
 
 qdrant:
  collection_name: educosys_claude
 
 llm:
  provider: openai        # openai | anthropic
- model: gpt-4o
+ model: gpt-5.5
 
 embeddings:
  provider: openai             
  model: text-embedding-3-small
-
-
-chromadb:
- persist_dir: .chromadb/
- collection_name: codebase
-
-
-elasticsearch:
- url: http://localhost:9200
- index_name: codebase
