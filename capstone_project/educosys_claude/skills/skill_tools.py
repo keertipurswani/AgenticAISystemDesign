@@ -1,19 +1,13 @@
 from __future__ import annotations
-
-
 from pathlib import Path
 
-
 from langchain.tools import tool
-
 
 from educosys_claude.config import config
 from educosys_claude.skills.registry import SkillRegistry, SkillNotFoundError
 from educosys_claude.observability.logger import get_logger
 
-
 logger = get_logger(__name__)
-
 
 # ---------------------------------------------------------------------------
 # Singleton registry
@@ -30,20 +24,15 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 _registry: SkillRegistry | None = None
 
-
-
-
 def get_registry() -> SkillRegistry:
    """
    Return the process-wide SkillRegistry, building it on first call.
-
 
    skills_dir resolution order:
      1. Read "skills.skills_dir" from config.yaml  →  e.g. ".educosys/skills"
      2. Resolve relative to Path.cwd()             →  the target project root
         (educosys_claude is invoked from the project being analysed, so cwd()
          IS the target project, not the educosys package itself)
-
 
    Example:
      User runs educosys_claude from /home/user/my_project/
@@ -59,22 +48,17 @@ def get_registry() -> SkillRegistry:
    return _registry
 
 
-
-
 # ---------------------------------------------------------------------------
 # Called by factory.py at agent build time (not a tool — plain function)
 # ---------------------------------------------------------------------------
-
 
 def build_skills_prompt() -> str:
    """
    Trigger registry initialisation and return the metadata-only prompt snippet.
 
-
    This is called once inside build_agent() in factory.py and its return value
    is appended to SYSTEM_PROMPT before the agent is created. The LLM therefore
    always knows what skills exist, without paying the token cost of their bodies.
-
 
    Flow:
        factory.py: build_agent()
@@ -88,12 +72,9 @@ def build_skills_prompt() -> str:
    return get_registry().build_skills_prompt()
 
 
-
-
 # ---------------------------------------------------------------------------
 # The agent-callable tool (registered in factory.py tools list)
 # ---------------------------------------------------------------------------
-
 
 @tool
 def load_skill(name: str) -> str:

@@ -1,3 +1,11 @@
+tasks:
+ db_path: .educosys/tasks.db
+
+llm:
+ provider: openai
+ model: gpt-4o
+ judge_model: gpt-4o-mini   # cheaper model used only for LLM-as-judge
+
 skills:
  skills_dir: .educosys/skills
 
@@ -22,10 +30,6 @@ vector_store:
 
 qdrant:
  collection_name: educosys_claude
-
-llm:
- provider: openai        # openai | anthropic
- model: gpt-5.5
 
 embeddings:
  provider: openai             

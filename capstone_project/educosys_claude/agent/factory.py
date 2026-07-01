@@ -4,13 +4,6 @@ from educosys_claude.llm.factory import get_llm
 from educosys_claude.agent.tools import search_codebase
 from educosys_claude.observability.logger import get_logger
 from educosys_claude.tools.terminal_tools import run_command, run_in_directory
-from educosys_claude.tools.filesystem_tools import (
-   read_file,
-   write_file,
-   append_file,
-   list_directory,
-   file_exists,
-)
 from educosys_claude.mcp.educosys_mcp_client import get_educosys_mcp_tools
 from educosys_claude.skills.skill_tools import load_skill, build_skills_prompt
 
@@ -36,11 +29,6 @@ async def build_agent(checkpointer):
        load_skill,
        run_command,
        run_in_directory,
-       read_file,
-       write_file,
-       append_file,
-       list_directory,
-       file_exists,
        *mcp_tools,
    ]
 

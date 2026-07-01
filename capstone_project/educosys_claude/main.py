@@ -15,6 +15,10 @@ from educosys_claude.agent.orchestrator import handle_query
 from educosys_claude.memory.session import get_current_session, new_session, switch_session
 from educosys_claude.observability.logger import get_logger
 
+from educosys_claude.tasks.orchestrator import handle_plan_command
+from educosys_claude.tasks.status import show_task_status
+
+
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -90,6 +94,12 @@ async def _run_async():
            elif user_input == "/show_index":
                logger.info("Showing index")
                get_index_inspector()(index)
+           elif user_input.startswith("/plan "):
+               goal = user_input.removeprefix("/plan ").strip()
+               logger.info(f"Plan command received: {goal}")
+               await handle_plan_command(goal)
+           elif user_input == "/task_status":
+               show_task_status()
            else:
                logger.warning(f"Unknown command received: {user_input}")
                console.print("[yellow]Unknown command. Try:[/yellow]")
@@ -98,6 +108,9 @@ async def _run_async():
                console.print("  [bold]/new_session[/bold]             — start a fresh conversation")
                console.print("  [bold]/switch <session_id>[/bold]     — resume a past session")
                console.print("  [bold]/session[/bold]                 — show current session id")
+               console.print("  [bold]/plan <goal>[/bold] — generate and execute a plan")
+               console.print("  [bold]/task_status[/bold] — show task progress for active project")
+
 
 
 
