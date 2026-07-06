@@ -159,13 +159,14 @@ async def run_subtask_agent(task: dict, dep_outputs: list[dict] | None = None) -
 
     agent = create_agent(llm, tools=tools, system_prompt=system_prompt)
 
-    # Be explicit that the project may be empty and files must be created from scratch.
-    # Without this, the agent explores the empty directory and returns nothing.
-    user_message = f"""{task['description']}
-
-The project directory may be empty — there is no existing code to read.
-You must CREATE all output files from scratch using write_file.
-Do not spend time listing directories. Go directly to writing the output files."""
+    # The project directory may be empty on first run — tell the agent to create files
+    # directly rather than spending turns exploring an empty directory.
+    user_message = (
+        f"{task['description']}\n\n"
+        "The project directory may be empty — there is no existing code to read.\n"
+        "You must CREATE all output files from scratch using write_file.\n"
+        "Do not spend time listing directories. Go directly to writing the output files."
+    )
 
     final_state = None
     async for step in agent.astream(
@@ -173,38 +174,27 @@ Do not spend time listing directories. Go directly to writing the output files."
         stream_mode="values",
     ):
         last_msg   = step["messages"][-1]
-        kind       = type(last_msg).__name__
         tool_calls = getattr(last_msg, "tool_calls", None)
         if tool_calls:
-            logger.info(f"Task {task['id']} → {kind} calling tools: {[tc['name'] for tc in tool_calls]}")
+            logger.info(f"Task {task['id']} → tool calls: {[tc['name'] for tc in tool_calls]}")
         else:
-            preview = str(getattr(last_msg, "content", ""))[:200]
-            logger.info(f"Task {task['id']} → {kind}: {preview}")
+            logger.info(f"Task {task['id']} → {type(last_msg).__name__}: {str(getattr(last_msg, 'content', ''))[:200]}")
         final_state = step
 
-    # Temporary debug — log full structure of last message to diagnose empty content
-    last = final_state["messages"][-1]
-    logger.info(f"DEBUG last message type: {type(last).__name__}")
-    logger.info(f"DEBUG content: {repr(getattr(last, 'content', 'NO_CONTENT_FIELD'))}")
-    logger.info(f"DEBUG tool_calls: {getattr(last, 'tool_calls', 'NO_TOOL_CALLS_FIELD')}")
-    logger.info(f"DEBUG additional_kwargs: {getattr(last, 'additional_kwargs', {})}")
-    logger.info(f"DEBUG response_metadata: {getattr(last, 'response_metadata', {})}")
+    def _get_content(msg) -> str:
+        # Claude returns content as a list of blocks; OpenAI returns a plain string.
+        content = getattr(msg, "content", "")
+        if isinstance(content, list):
+            return " ".join(b.get("text", "") for b in content if isinstance(b, dict))
+        return content or ""
 
-    # Walk backwards through messages to find the last non-empty AIMessage content.
-    # The final message can be an empty AIMessage if the model finishes a tool loop
-    # without producing a text summary — this finds the actual last meaningful output.
-    output = ""
-    for msg in reversed(final_state["messages"]):
-        if type(msg).__name__ == "AIMessage":
-            content = getattr(msg, "content", "")
-            # Claude returns content as a list of blocks; OpenAI returns a plain string.
-            if isinstance(content, list):
-                content = " ".join(
-                    b.get("text", "") for b in content if isinstance(b, dict)
-                )
-            if content.strip():
-                output = content
-                break
+    # The final AIMessage can be empty for reasoning models (reasoning tokens are internal).
+    # Walk backwards to find the last message that actually has visible content.
+    output = next(
+        (_get_content(msg) for msg in reversed(final_state["messages"])
+         if type(msg).__name__ == "AIMessage" and _get_content(msg).strip()),
+        ""
+    )
 
     if not output.strip():
         raise ValueError("Agent returned empty output — it did not write any files or produce a summary")

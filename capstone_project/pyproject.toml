@@ -22,7 +22,8 @@ dependencies = [
     "langgraph-checkpoint-sqlite (>=3.1.0,<4.0.0)",
     "tree-sitter (==0.21.3)",
     "tree-sitter-languages (==1.10.2)",
-    "langchain-mcp-adapters (>=0.3.0,<0.4.0)"
+    "langchain-mcp-adapters (>=0.3.0,<0.4.0)",
+    "watchdog (>=6.0.0,<7.0.0)"
 ]
 
 

@@ -130,8 +130,9 @@ class SQLiteTaskStore:
                     description      TEXT NOT NULL,
                     task_type        TEXT NOT NULL,
                     status           TEXT DEFAULT 'pending',
-                    depends_on       TEXT DEFAULT '[]',
-                    output_files     TEXT DEFAULT '[]',
+                    depends_on           TEXT DEFAULT '[]',
+                    output_files         TEXT DEFAULT '[]',
+                    acceptance_criteria  TEXT DEFAULT '[]',
                     result           TEXT,
                     error            TEXT,
                     retry_count      INTEGER DEFAULT 0,
@@ -165,13 +166,14 @@ class SQLiteTaskStore:
                 conn.execute(
                     """INSERT INTO tasks
                        (id, project_id, title, description, task_type,
-                        depends_on, output_files, execution_order)
-                       VALUES (?,?,?,?,?,?,?,?)""",
+                        depends_on, output_files, acceptance_criteria, execution_order)
+                       VALUES (?,?,?,?,?,?,?,?,?)""",
                     (
                         pt.id, project_id, pt.title, pt.description,
                         pt.task_type.value,
                         json.dumps(pt.depends_on),
                         json.dumps(pt.output_files),
+                        json.dumps(pt.acceptance_criteria),
                         i,
                     )
                 )
@@ -248,6 +250,8 @@ class SQLiteTaskStore:
     # Queries
     # ------------------------------------------------------------------
 
+    # get ready tasks - get tasks that are in pending state and 
+    # their dependents are all done
     def get_ready_tasks(self, project_id: str) -> list[dict]:
         """Return PENDING tasks whose every dependency is COMPLETED or SKIPPED."""
         with self._conn() as conn:
@@ -258,13 +262,17 @@ class SQLiteTaskStore:
                 (project_id,)
             ).fetchall()
 
+        # list of pending tasks
+
         ready = []
         for row in rows:
+            # for each of the pending tasks
             deps = json.loads(row["depends_on"])
             if self._all_deps_done(project_id, deps):
                 ready.append(dict(row))
         return ready
 
+    # checking if dependents of task are done - true or false
     def _all_deps_done(self, project_id: str, dep_ids: list[str]) -> bool:
         if not dep_ids:
             return True
@@ -276,6 +284,7 @@ class SQLiteTaskStore:
                       AND status NOT IN ('completed', 'skipped')""",
                 dep_ids
             ).fetchone()
+        # no of dependents that are not completed/skipped should be 0
         return row[0] == 0
 
     def get_all_tasks(self, project_id: str) -> list[dict]:

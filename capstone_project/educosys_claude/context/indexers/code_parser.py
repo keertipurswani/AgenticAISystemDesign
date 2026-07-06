@@ -33,19 +33,14 @@ EXTENSION_TO_LANGUAGE = {
   ".sh": "bash",
 }
 
-
-
-
 # Text/config files have no meaningful AST — we chunk them by line count instead.
 TEXT_EXTENSIONS = {".md", ".txt", ".yaml", ".yml", ".json", ".toml"}
 ALL_EXTENSIONS = set(EXTENSION_TO_LANGUAGE.keys()) | TEXT_EXTENSIONS
-
 
 # Sliding window settings for text files and AST fallback.
 # CHUNK_OVERLAP ensures context isn't lost at chunk boundaries.
 CHUNK_SIZE = 50
 CHUNK_OVERLAP = 10
-
 
 # Tree-sitter node type names that correspond to a named, indexable block.
 # These are consistent across languages — tree-sitter uses the same names where possible.
@@ -56,7 +51,6 @@ BLOCK_NODE_TYPES = {
   "function_item",    # Rust uses this instead of function_definition
   "func_declaration", # Go
 }
-
 
 @dataclass
 class ParsedChunk:

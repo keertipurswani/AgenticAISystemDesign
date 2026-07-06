@@ -58,7 +58,7 @@ class TaskOrchestrator:
                 f" · {pending} pending"
                 f" · {failed} failed[/dim]"
             )
-
+            # all tasks are done - nothing in pending and nothing is in progress
             if pending == 0 and in_progress == 0:
                 _print_final_summary(progress)
                 break
