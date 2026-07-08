@@ -1,0 +1,8 @@
+langchain
+langchain-openai
+langchain-groq
+langchain_mcp_adapters
+python-dotenv
+mcp
+langgraph-checkpoint-sqlite
+langfuse
