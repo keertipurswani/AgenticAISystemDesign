@@ -1,0 +1,6 @@
+langchain
+langchain-openai
+langgraph-checkpoint-sqlite
+python-dotenv
+redis
+redisvl
