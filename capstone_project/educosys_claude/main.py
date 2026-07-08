@@ -12,12 +12,12 @@ from educosys_claude.agent.factory import build_agent
 from educosys_claude.memory.short_term import get_checkpointer_db_path
 from educosys_claude.agent.orchestrator import handle_query
 from educosys_claude.memory.session import get_current_session, new_session, switch_session
+from educosys_claude.cache.semantic_cache import build_semantic_cache, get_repo_domain
 from educosys_claude.observability.logger import get_logger
 
 from educosys_claude.tasks.orchestrator import handle_plan_command
 from educosys_claude.tasks.status import show_task_status
 from educosys_claude.context.indexers.watcher import start_watcher, stop_watcher
-
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -33,19 +33,36 @@ def get_or_create_index():
 
 
 async def initialize(checkpointer):
-    """Bootstrap LLM, embedder, index, watcher, MCP tools, and session before the REPL starts."""
+    """Bootstrap LLM, embedder, index, watcher, MCP tools, cache, and session before the REPL starts."""
     llm      = get_llm()
     embedder = get_embedder()
     console.print(f"[dim]LLM: {config['llm']['provider']} / {config['llm']['model']}[/dim]")
     console.print(f"[dim]Embedder: {config['embeddings']['provider']} / {config['embeddings']['model']}[/dim]")
 
-    index      = get_or_create_index()
-    observer   = start_watcher(str(Path.cwd()))
+    repo_path = str(Path.cwd())
+    index = get_or_create_index()
+
+    semantic_cache = await build_semantic_cache()
+    cache_domain = get_repo_domain(repo_path) if semantic_cache else None
+    if semantic_cache is not None:
+        console.print(f"[dim]Semantic cache: enabled (threshold={semantic_cache.threshold})[/dim]")
+    else:
+        console.print("[dim]Semantic cache: disabled[/dim]")
+
+    loop = asyncio.get_running_loop()
+
+    def _invalidate_cache_on_change() -> None:
+        if semantic_cache is not None:
+            asyncio.run_coroutine_threadsafe(
+                semantic_cache.invalidate_domain(cache_domain), loop
+            )
+
+    observer   = start_watcher(repo_path, on_change=_invalidate_cache_on_change)
     agent      = await build_agent(checkpointer)
     session_id = get_current_session()
     console.print(f"[dim]Session: {session_id}[/dim]")
     console.print(f"[green]✓ Ready[/green]\n")
-    return llm, embedder, index, agent, session_id, observer
+    return llm, embedder, index, agent, session_id, observer, semantic_cache, cache_domain
 
 
 async def _run_async():
@@ -53,7 +70,7 @@ async def _run_async():
     console.print("\n[bold blue]Educosys Claude[/bold blue] — RAG-powered code assistant")
 
     async with AsyncSqliteSaver.from_conn_string(get_checkpointer_db_path()) as checkpointer:
-        llm, embedder, index, agent, session_id, observer = await initialize(checkpointer)
+        llm, embedder, index, agent, session_id, observer, semantic_cache, cache_domain = await initialize(checkpointer)
         console.print("Type [bold]'/exit'[/bold] to quit\n")
 
         try:
@@ -70,11 +87,17 @@ async def _run_async():
                     question = user_input.removeprefix("/ask ").strip()
                     logger.info(f"Ask command received: {question}")
                     console.print(f"[dim]Searching for: {question}...[/dim]")
-                    response = await handle_query(agent, question, session_id)
+                    response = await handle_query(
+                        agent, question, session_id,
+                        semantic_cache=semantic_cache, cache_domain=cache_domain,
+                    )
                     console.print(response)
                 elif user_input == "/reindex":
                     console.print("[dim]Re-indexing current directory...[/dim]")
                     get_or_create_index()
+                    if semantic_cache is not None:
+                        await semantic_cache.invalidate_domain(cache_domain)
+                        console.print("[dim]Semantic cache invalidated for this repo.[/dim]")
                     console.print("[green]✓ Re-index complete.[/green]")
                 elif user_input == "/new_session":
                     session_id = new_session()
@@ -108,12 +131,8 @@ async def _run_async():
         finally:
             stop_watcher(observer)
 
-
 def run():
     asyncio.run(_run_async())
-
-
-
 
 if __name__ == "__main__":
     run()

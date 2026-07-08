@@ -61,10 +61,11 @@ class _CodebaseEventHandler(FileSystemEventHandler):
       _DEBOUNCE_SECONDS.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, on_change=None) -> None:
         # {filepath: threading.Timer} — one pending debounced call per file.
         # Timers are daemon threads so they don't block process exit.
         self._timers: dict[str, threading.Timer] = {}
+        self._on_change = on_change
 
     def _is_indexable(self, path: str) -> bool:
         """True if the file extension is one the indexer knows how to parse."""
@@ -101,6 +102,8 @@ class _CodebaseEventHandler(FileSystemEventHandler):
             remove_file_from_index(filepath)
         else:
             index_single_file(filepath)
+        if self._on_change is not None:
+            self._on_change()
 
     # ── watchdog event hooks ──────────────────────────────────────────
 
@@ -126,7 +129,7 @@ class _CodebaseEventHandler(FileSystemEventHandler):
                 self._schedule("upsert", event.dest_path)
 
 
-def start_watcher(repo_path: str) -> Observer:
+def start_watcher(repo_path: str, on_change=None) -> Observer:
     """
     Start a filesystem observer on repo_path in a background daemon thread.
 
@@ -134,9 +137,13 @@ def start_watcher(repo_path: str) -> Observer:
     Daemon=True means the thread won't prevent the process from exiting
     if the user hits Ctrl+C without going through /exit.
 
+    on_change, if given, is called (with no args) after every debounced
+    index update - used to invalidate the semantic cache when the
+    underlying codebase changes.
+
     Returns the Observer so the caller can call stop_watcher() on shutdown.
     """
-    handler  = _CodebaseEventHandler()
+    handler  = _CodebaseEventHandler(on_change=on_change)
     observer = _get_observer()
     observer.schedule(handler, repo_path, recursive=True)
     observer.daemon = True

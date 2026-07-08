@@ -1,3 +1,14 @@
+embeddings:
+ provider: openai             
+ model: text-embedding-3-small
+ dims: 1536
+
+semantic_cache:
+ enabled: true
+ redis_url: redis://localhost:6379
+ threshold: 0.85
+ ttl: 86400
+
 tasks:
  db_path: .educosys/tasks.db
 
@@ -30,7 +41,3 @@ vector_store:
 
 qdrant:
  collection_name: educosys_claude
-
-embeddings:
- provider: openai             
- model: text-embedding-3-small
